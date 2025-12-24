@@ -3,8 +3,7 @@ import Navbar from "./components/Navbar";
 import ItemCard from "./components/ItemCard";
 import Footer from "./components/Footer";
 import "./App.css";
-
-const API_URL = "https://recipe-finder-backend.onrender.com";
+const API_URL =fetch("https://recipe-finder-backend-1-5mw8.onrender.com/api/recipes")
 
 function App() {
   const [recipes, setRecipes] = useState(() => {
