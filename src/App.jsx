@@ -1,143 +1,93 @@
-import { useState, useEffect } from "react";
-import Navbar from "./components/Navbar";
-import ItemCard from "./components/ItemCard";
-import Footer from "./components/Footer";
-import "bootstrap/dist/css/bootstrap.min.css";
+import { useEffect, useState } from "react";
+import axios from "axios";
 
-const API_URL = "https://recipe-finder-backend-1-5mw8.onrender.com";
-function App() {
-  const [activePage, setActivePage] = useState("home");
+const API_URL = "https://recipe-finder-backend-1-5mw8.onrender.com/api/recipes";
 
-  // 🔹 Load recipes from localStorage OR default recipes
-  const [recipes, setRecipes] = useState(() => {
-    const savedRecipes = localStorage.getItem("recipes");
-    return savedRecipes
-      ? JSON.parse(savedRecipes)
-      : [
-          { id: 1, name: "Pizza", desc: "Cheesy Italian Pizza", img: "/images/pizza.jpg" },
-          { id: 2, name: "Burger", desc: "Juicy Veg Burger", img: "/images/burger.jpg" },
-          { id: 3, name: "Pasta", desc: "Creamy Pasta", img: "/images/pasta.jpg" },
-          { id: 4, name: "Biryani", desc: "Spicy Veg Biryani", img: "/images/biryani.jpg" },
-          { id: 5, name: "Dosa", desc: "Crispy Dosa", img: "/images/dosa.jpg" },
-          { id: 6, name: "Sandwich", desc: "Healthy Sandwich", img: "/images/sandwich.jpg" },
-          { id: 7, name: "Noodles", desc: "Veg Noodles", img: "/images/noodles.jpg" },
-          { id: 8, name: "Cake", desc: "Chocolate Cake", img: "/images/cake.jpg" },
-          { id: 9, name: "Salad", desc: "Fresh Salad", img: "/images/salad.jpg" },
-          { id: 10, name: "Soup", desc: "Hot Soup", img: "/images/soup.jpg" }
-        ];
-  });
+export default function App() {
+  const [recipes, setRecipes] = useState([]);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [editingId, setEditingId] = useState(null);
 
-  const [newRecipe, setNewRecipe] = useState({
-    name: "",
-    desc: "",
-    img: ""
-  });
+  // READ
+  const fetchRecipes = async () => {
+    const res = await axios.get(API_URL);
+    setRecipes(res.data);
+  };
 
-  // 🔹 Save recipes to localStorage whenever recipes change
   useEffect(() => {
-    localStorage.setItem("recipes", JSON.stringify(recipes));
-  }, [recipes]);
+    fetchRecipes();
+  }, []);
 
-  const addRecipe = (e) => {
+  // CREATE + UPDATE
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    setRecipes([...recipes, { ...newRecipe, id: Date.now() }]);
-    setNewRecipe({ name: "", desc: "", img: "" });
+
+    if (editingId) {
+      await axios.put(`${API_URL}/${editingId}`, {
+        title,
+        description
+      });
+      setEditingId(null);
+    } else {
+      await axios.post(API_URL, {
+        title,
+        description
+      });
+    }
+
+    setTitle("");
+    setDescription("");
+    fetchRecipes();
   };
 
-  const deleteRecipe = (id) => {
-    setRecipes(recipes.filter((r) => r.id !== id));
+  // DELETE
+  const handleDelete = async (id) => {
+    await axios.delete(`${API_URL}/${id}`);
+    fetchRecipes();
   };
 
-  const clearAllRecipes = () => {
-    setRecipes([]);
-    localStorage.removeItem("recipes");
+  // EDIT
+  const handleEdit = (recipe) => {
+    setTitle(recipe.title);
+    setDescription(recipe.description);
+    setEditingId(recipe._id);
   };
 
   return (
-    <div className="d-flex flex-column min-vh-100">
-      <Navbar setActivePage={setActivePage} />
+    <div style={{ padding: "20px", maxWidth: "600px", margin: "auto" }}>
+      <h1>🍲 Recipe Finder</h1>
 
-      <div className="container my-4">
-        {activePage === "home" && (
-          <div className="text-center">
-            <h1>Welcome to Recipe Finder 🍽️</h1>
-            <p>Add, like & save recipes permanently</p>
-          </div>
-        )}
+      <form onSubmit={handleSubmit}>
+        <input
+          placeholder="Recipe Title"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          required
+        />
+        <br /><br />
+        <textarea
+          placeholder="Recipe Description"
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          required
+        />
+        <br /><br />
+        <button type="submit">
+          {editingId ? "Update Recipe" : "Add Recipe"}
+        </button>
+      </form>
 
-        {activePage === "about" && (
-          <div className="text-center">
-            <h2>About</h2>
-            <p>This app stores recipes using localStorage.</p>
-          </div>
-        )}
+      <hr />
 
-        {activePage === "project" && (
-          <div className="text-center">
-            <h2>Project</h2>
-            <p>React app with persistent data storage.</p>
-          </div>
-        )}
-
-        {activePage === "product" && (
-          <>
-            <form className="mb-4" onSubmit={addRecipe}>
-              <input
-                className="form-control mb-2"
-                placeholder="Recipe Name"
-                value={newRecipe.name}
-                onChange={(e) =>
-                  setNewRecipe({ ...newRecipe, name: e.target.value })
-                }
-                required
-              />
-
-              <input
-                className="form-control mb-2"
-                placeholder="Description"
-                value={newRecipe.desc}
-                onChange={(e) =>
-                  setNewRecipe({ ...newRecipe, desc: e.target.value })
-                }
-                required
-              />
-
-              <input
-                className="form-control mb-2"
-                placeholder="Image Path (/images/...)"
-                value={newRecipe.img}
-                onChange={(e) =>
-                  setNewRecipe({ ...newRecipe, img: e.target.value })
-                }
-                required
-              />
-
-              <button className="btn btn-success">Add Recipe</button>
-              <button
-                type="button"
-                className="btn btn-danger ms-2"
-                onClick={clearAllRecipes}
-              >
-                Clear All
-              </button>
-            </form>
-
-            <div className="row">
-              {recipes.map((recipe) => (
-                <ItemCard
-                  key={recipe.id}
-                  recipe={recipe}
-                  deleteRecipe={deleteRecipe}
-                />
-              ))}
-            </div>
-          </>
-        )}
-      </div>
-
-      <Footer />
+      {recipes.map((recipe) => (
+        <div key={recipe._id} style={{ marginBottom: "15px" }}>
+          <h3>{recipe.title}</h3>
+          <p>{recipe.description}</p>
+          <button onClick={() => handleEdit(recipe)}>Edit</button>
+          <button onClick={() => handleDelete(recipe._id)}>Delete</button>
+        </div>
+      ))}
     </div>
   );
 }
-
-export default App;
