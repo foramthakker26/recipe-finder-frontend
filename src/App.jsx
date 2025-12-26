@@ -3,7 +3,8 @@ import Navbar from "./components/Navbar";
 import ItemCard from "./components/ItemCard";
 import Footer from "./components/Footer";
 import "./App.css";
-const API_URL =fetch("https://recipe-finder-backend-1-5mw8.onrender.com/api/recipes")
+
+const API_URL = "https://recipe-finder-backend-1-5mw8.onrender.com";
 
 function App() {
   const [recipes, setRecipes] = useState(() => {
@@ -17,7 +18,9 @@ function App() {
     image: "",
   });
 
-  // 🔄 Load from backend only once
+  const [editId, setEditId] = useState(null); // ⭐ NEW
+
+  // 🔄 Load from backend once
   useEffect(() => {
     const fetchRecipes = async () => {
       try {
@@ -36,17 +39,46 @@ function App() {
     // eslint-disable-next-line
   }, []);
 
-  // 💾 Save recipes locally
+  // 💾 Save locally
   useEffect(() => {
     localStorage.setItem("recipes", JSON.stringify(recipes));
   }, [recipes]);
 
+  // ➕ ADD or ✏️ UPDATE
   const handleSubmit = (e) => {
     e.preventDefault();
     if (!form.title || !form.description || !form.image) return;
 
-    setRecipes([...recipes, { ...form, _id: Date.now() }]);
+    if (editId) {
+      // ✏️ UPDATE
+      const updated = recipes.map((r) =>
+        r._id === editId ? { ...r, ...form } : r
+      );
+      setRecipes(updated);
+      setEditId(null);
+    } else {
+      // ➕ ADD
+      setRecipes([...recipes, { ...form, _id: Date.now() }]);
+    }
+
     setForm({ title: "", description: "", image: "" });
+  };
+
+  // ❌ DELETE
+  const handleDelete = (id) => {
+    const updated = recipes.filter((r) => r._id !== id);
+    setRecipes(updated);
+  };
+
+  // ✏️ EDIT
+  const handleEdit = (recipe) => {
+    setForm({
+      title: recipe.title,
+      description: recipe.description,
+      image: recipe.image,
+    });
+    setEditId(recipe._id);
+    window.scrollTo({ top: 0, behavior: "smooth" });
   };
 
   return (
@@ -59,22 +91,19 @@ function App() {
       </section>
 
       <section className="form-section">
-        <h2>Add Your Recipe</h2>
+        <h2>{editId ? "Edit Recipe" : "Add Your Recipe"}</h2>
+
         <form onSubmit={handleSubmit}>
           <input
             placeholder="Recipe Title"
             value={form.title}
-            onChange={(e) =>
-              setForm({ ...form, title: e.target.value })
-            }
+            onChange={(e) => setForm({ ...form, title: e.target.value })}
           />
 
           <input
             placeholder="Image URL"
             value={form.image}
-            onChange={(e) =>
-              setForm({ ...form, image: e.target.value })
-            }
+            onChange={(e) => setForm({ ...form, image: e.target.value })}
           />
 
           <textarea
@@ -85,7 +114,9 @@ function App() {
             }
           />
 
-          <button type="submit">Add Recipe</button>
+          <button type="submit">
+            {editId ? "Update Recipe" : "Add Recipe"}
+          </button>
         </form>
       </section>
 
@@ -93,7 +124,12 @@ function App() {
         <h2>All Recipes</h2>
         <div className="grid">
           {recipes.map((recipe) => (
-            <ItemCard key={recipe._id} recipe={recipe} />
+            <ItemCard
+              key={recipe._id}
+              recipe={recipe}
+              onDelete={handleDelete}
+              onEdit={handleEdit}
+            />
           ))}
         </div>
       </section>
